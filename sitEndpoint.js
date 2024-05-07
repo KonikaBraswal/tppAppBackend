@@ -191,7 +191,7 @@ async function accountRequest(permissions){
             "iss": variables.client_id,
             "response_type": "code id_token",
             "client_id": variables.client_id,
-            "rediect_uri": variables.redirect_uri,
+            "redirect_uri": variables.redirect_uri,
             "scope": variables.scope,
             "consentRefId":jsonData.Data.ConsentId,
             "exp": Math.round(600 + Date.now() / 1000),
@@ -263,362 +263,806 @@ async function accountRequest(permissions){
 
 async function exchangeAuthCode(authCode){ 
     console.log(authCode);
-    try {
-        const body = {
-          grant_type: 'authorization_code',
-          client_id: variables.clientId,
-          redirect_uri: variables.redirectUrl,
-          client_secret: variables.clientSecret,
-          code: authCode
-        };
-
-        const headers = {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-
-        const options ={
-            method: 'POST',
-            url: `${variables.tokenDomain}/token`,
-            headers: headers,
-            data: body
-        }
-
-        const response = await axios(options);
-        // variables.access_token_1 = "";
-        variables.access_token_2 = response.data.access_token;
-        variables.refresh_token = response.data.refresh_token;
-        // console.log("variable access token 1: \n", variables.access_token_2);
-        // console.log("response access token 1: \n", variables.access_token_2);
-        // console.log("variable refresh token 1: \n", variables.refresh_token);
-        // console.log("response refresh token 1: \n", variables.refresh_token);
-        console.log("first Response", response.data);
-        return response;
-    }catch(error){
-        console.error('Error in retrieveAccessToken function' + error);
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+
+    const body = {
+        grant_type: 'authorization_code',
+        code_verifier: variables.auth_code_verifier,
+        client_id: variables.client_id,
+        code_challenge_metod: variables.accounts_auth_code_challenge_method,
+        code: authCode,
+        client_assertion: variables.jwt_token,
+        client_assertion_type: variables.client_assertion_type,
+        redirect_uri: variables.redirect_uri
+    };
+
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const options ={
+        method: 'POST',
+        url: `${variables.prerequest_url}`,
+        headers: headers,
+        data: body,
+        httpsAgent: new https.Agent({
+            rejectUnauthorized: false,
+            cert: cert,
+            key: key,
+            passphrase: "password1",
+            hostname: variables.https_host_name
+         })
+    }
+
+    const response = await axios(options);
+    variables.access_token_2 = response.data.access_token;
+    variables.refresh_token = response.data.refresh_token;
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function refreshToken(){ 
-    
-    try {
-        const body = {
-          grant_type: 'refresh_token',
-          client_id: variables.clientId,
-        //   redirect_uri: variables.redirectUri,
-          client_secret: variables.clientSecret,
-          refresh_token: variables.refresh_token
-        };
-
-        const headers = {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-
-        const options ={
-            method: 'POST',
-            url: `${variables.tokenDomain}/token`,
-            headers: headers,
-            data: body
-        }
-
-        const response = await axios(options);
-        // variables.access_token_1 = "";
-        variables.access_token_2 = response.data.access_token;
-        variables.refresh_token = response.data.refresh_token;
-        console.log("first Response", response.data);
-        // console.log("variable access token 2: \n", variables.access_token_2);
-        // console.log("response access token 2: \n", variables.access_token_2);
-        // console.log("variable refresh token 2: \n", variables.refresh_token);
-        // console.log("response refresh token 2: \n", variables.refresh_token);
-        return response;
-    }catch(error){
-        console.error('Error in retrieveAccessToken function' + error);
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+
+    const body = {
+        grant_type: 'refresh_token',
+        refresh_token: variables.refresh_token,
+        client_id: variables.client_id,
+        client_assertion: variables.jwt_token,
+        client_assertion_type: variables.client_assertion_type
+    };
+
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const options ={
+        method: 'POST',
+        url: `${variables.prerequest_url}`,
+        headers: headers,
+        data: body,
+        httpsAgent: new https.Agent({
+            rejectUnauthorized: false,
+            cert: cert,
+            key: key,
+            passphrase: "password1",
+            hostname: variables.https_host_name
+         })
+    }
+
+    const response = await axios(options);
+    variables.access_token_2 = response.data.access_token;
+    variables.refresh_token = response.data.refresh_token;
+    console.log("first Response", response.data);
+    return response; 
 }
 
-async function fetchAge(){     
-    try {
+// async function fetchAge(){     
+//     try {
 
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
+//         const headers = {
+//             Authorization: `Bearer ${variables.access_token_2}`,
+//             'Content-Type': 'application/json'
+//         }
 
-        const apiUrl = `${variables.apiUrlPrefix}/zerocode/bankofapis.com/customer-age/v3/attributes/age`;
+//         const apiUrl = `${variables.apiUrlPrefix}/zerocode/bankofapis.com/customer-age/v3/attributes/age`;
 
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
+//         const options ={
+//             method: 'GET',
+//             url: apiUrl,
+//             headers: headers,
+//         }
 
-        const response = await axios(options);
-        console.log("second Response", response.data);
+//         const response = await axios(options);
+//         console.log("second Response", response.data);
 
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
+//         return response;
+//     }catch(error){
+//         console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
  
-    }
-}
+//     }
+// }
 
 async function fetchAccounts(){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("second Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function fetchAccountDetails(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("Particular Account Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function fetchTransactions(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/transactions`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("Transactions Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/transactions`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function fetchBalances(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/balances`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("Balances Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/balances`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function fetchBeneficiaries(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/beneficiaries`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("Benefeciaries Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/beneficiaries`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function fetchStatements(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/statements`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("statements Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/statements`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function directDebits(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/direct-debits`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("direct-debits Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/direct-debits`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function fetchProducts(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/product`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("products Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/product`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function standingOrders(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/standing-orders`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("standing-orders Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/standing-orders`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 async function scheduledPayments(accountId){     
-    try {
-
-        const headers = {
-            Authorization: `Bearer ${variables.access_token_2}`,
-            'Content-Type': 'application/json'
-        }
-
-        const apiUrl = `${variables.apiUrlPrefix}/open-banking/v3.1/aisp/accounts/${accountId}/scheduled-payments`;
-
-        const options ={
-            method: 'GET',
-            url: apiUrl,
-            headers: headers,
-        }
-
-        const response = await axios(options);
-        console.log("scheduled-payments Response", response.data);
-
-        return response;
-    }catch(error){
-        console.error('Error in accountRequest function', error.response ? error.response.data : error.message);
- 
+    const alg = variables.alg;
+    var header = {
+        "kid": variables.signing_key_id,
+        "typ": "JWS",
+        "alg": alg
     }
+
+    var now_date = Math.round(Date.now() / 1000);
+    var exp_date = Math.round(600 + Date.now() / 1000);
+
+    var data = {
+        "sub": variables.client_id,
+        "aud": variables.prerequest_url,
+        "scope": variables.scope,
+        "iss": variables.client_id,
+        "iat": now_date,
+        "exp": exp_date,
+        "jti": uuid.v4()
+    }
+
+    var prvKey = variables.private_key;
+    var sHeader = JSON.stringify(header);
+    var sPayload = JSON.stringify(data);
+
+    var sJWT = KJUR.jws.JWS.sign(alg, sHeader, sPayload, prvKey);
+    variables.jwt_token = sJWT;
+    
+
+    const headers = {
+        authorization: `Bearer ${variables.access_token_2}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    const tunnelingAgent = tunnel.httpsOverHttp({
+        cert: cert,
+        key: key,
+        passphrase: "password1",
+        proxy:{
+            host: variables.proxy_host,
+            port: "8080",
+            proxyAuth: `${variables.user_name}:${variables.password}`,
+            headers: {
+                'User-Agent': 'Node'
+            }
+        }
+     });
+
+    const options ={
+        method: 'GET',
+        url: `${variables.base_url}/open-banking/v3.1/aisp/accounts/${accountId}/scheduled-payments`,
+        headers: headers,
+        httpsAgent: tunnelingAgent
+    }
+
+    require('axios-debug-log/enable');
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+
+    const response = await axios(options);
+   
+    console.log("first Response", response.data);
+    return response;
 }
 
 
