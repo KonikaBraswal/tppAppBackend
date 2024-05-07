@@ -1,0 +1,104 @@
+{
+    "_postman_variable_scope": "environment", 
+    "_postman_exported_using": "Postman/6.3.0", 
+    "values": [
+        {
+            "value": "https://api.sandbox.rbs.co.uk/.well-known/openid-configuration", 
+            "key": "wellKnownEndpoint"
+        }, 
+        {
+            "value": "https://auth.sandbox.rbs.co.uk", 
+            "key": "keycloakUrl"
+        }, 
+        {
+            "value": "openid accounts", 
+            "key": "scope"
+        },
+        {
+            "value": "RBS", 
+            "key": "realmName"
+        }, 
+        {
+            "value": "https://api.sandbox.rbs.co.uk/authorize", 
+            "key": "consentUrl"
+        },
+        {
+            "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHAiOiJkZW1vLWFwcC02MDI5ZTIxNS04YmUyLTQ1YjEtODMxNS1jYzE3YWQzZDE2YTkiLCJvcmciOiI2MDI5ZTIxNS04YmUyLTQ1YjEtODMxNS1jYzE3YWQzZDE2YTkuZXhhbXBsZS5vcmciLCJpc3MiOiJodHRwczovL2FwaS5zYW5kYm94Lm5hdHdlc3QuY29tIiwidG9rZW5fdHlwZSI6IkFDQ0VTU19UT0tFTiIsImV4dGVybmFsX2NsaWVudF9pZCI6Im81Mmp2cXNzM2VEeENlaEEzM1dPUTB6WVhyS2hFQWJTQVN5SHV2bjhoaFk9IiwiY2xpZW50X2lkIjoiNTRjZTU4Y2UtY2ZhZC00YjkzLWI5NGUtYWMyZTM1Zjk0YmFmIiwibWF4X2FnZSI6ODY0MDAsImF1ZCI6IjU0Y2U1OGNlLWNmYWQtNGI5My1iOTRlLWFjMmUzNWY5NGJhZiIsInVzZXJfaWQiOiIxMjM0NTY3ODkwMTJANjAyOWUyMTUtOGJlMi00NWIxLTgzMTUtY2MxN2FkM2QxNmE5LmV4YW1wbGUub3JnIiwiZ3JhbnRfaWQiOiI0YmIzYzAyOS1lZjdjLTRkZTktODQ0My1kMjhhY2JkYzRiYzgiLCJzY29wZSI6ImFjY291bnRzIG9wZW5pZCIsImNvbnNlbnRfcmVmZXJlbmNlIjoiNzBiYTM5ODUtMWNkMC00YTk4LWExMTktODBhZjc0MTYwMDgzIiwiZXhwIjoxNzE0OTg4NDMzLCJpYXQiOjE3MTQ5ODc4MzMsImp0aSI6ImFmZWMwYmViLWNhN2YtNGM0OC1hYzE4LWViOGZjOWM0M2EwMyIsInRlbmFudCI6Ik5hdFdlc3QifQ.OS_PixwvF1sZ1W4OpscNqXWlhDYM86ED4MWXc0BIAiu1wp3tWnrUFkKvt4EdYVKGYZR6tiBSIf4_KrHhJ19MwF9cz7ZCyZulgwNM8cXR4DXDph4h7g5ZKyfWWyTAa_Jww5zBBttEnBZvvCu7QQwBKAxb0ElD201XFfWBwS2LGQJIOT4rtcioOKC_BXwoTpK_jrm4WEEUCN5bs05tU5gB95tGTHlZx0aYDt-xbiLqJ2OqIWr8mafX7nPgUQb_xZraCiSXWUfavoiT4ZquyM3vgJAqto2-dpzPIQ12VuO8Fn6IeGnTp07CNpxt2K3CH5ko7DGMplbP4koXFEM8J1v6JQ", 
+            "key": "access_token_2"
+        }, 
+        {
+            "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHAiOiJkZW1vLWFwcC02MDI5ZTIxNS04YmUyLTQ1YjEtODMxNS1jYzE3YWQzZDE2YTkiLCJvcmciOiI2MDI5ZTIxNS04YmUyLTQ1YjEtODMxNS1jYzE3YWQzZDE2YTkuZXhhbXBsZS5vcmciLCJpc3MiOiJodHRwczovL2FwaS5zYW5kYm94Lm5hdHdlc3QuY29tIiwidG9rZW5fdHlwZSI6IlJFRlJFU0hfVE9LRU4iLCJleHRlcm5hbF9jbGllbnRfaWQiOiJvNTJqdnFzczNlRHhDZWhBMzNXT1EwellYcktoRUFiU0FTeUh1dm44aGhZPSIsImNsaWVudF9pZCI6IjU0Y2U1OGNlLWNmYWQtNGI5My1iOTRlLWFjMmUzNWY5NGJhZiIsIm1heF9hZ2UiOjg2NDAwLCJhdWQiOiI1NGNlNThjZS1jZmFkLTRiOTMtYjk0ZS1hYzJlMzVmOTRiYWYiLCJ1c2VyX2lkIjoiMTIzNDU2Nzg5MDEyQDYwMjllMjE1LThiZTItNDViMS04MzE1LWNjMTdhZDNkMTZhOS5leGFtcGxlLm9yZyIsImdyYW50X2lkIjoiNGJiM2MwMjktZWY3Yy00ZGU5LTg0NDMtZDI4YWNiZGM0YmM4Iiwic2NvcGUiOiJhY2NvdW50cyBvcGVuaWQiLCJjb25zZW50X3JlZmVyZW5jZSI6IjcwYmEzOTg1LTFjZDAtNGE5OC1hMTE5LTgwYWY3NDE2MDA4MyIsImlhdCI6MTcxNDk4NzgzMywianRpIjoiNzI1MWY2NzAtMTRjYy00Y2UxLTg2MzMtNmU3NTQyY2VmZmM4IiwidGVuYW50IjoiTmF0V2VzdCJ9.j8B3tZoV3ixsYsVJSXP4aeXPlCnKbH6LxF1FI3YCC0DYci4Ce_2wauchsQPCYuQVzNESrPWTN61uinfUZ5dCpJc3s5wM5-XL74CVTNu6FCwVVNycleKMPFmMgrbhwzxXgC3PGDWZWnnhtNHEJs1AJD6rOIJdga_-_9cKYINWhU1JxBDe0PJM75KUx9Xe4gAVt1KFxmBBYlPBDDZwkBQqVzYmv0hnU72qBxTXmpKbQhTV-ZQpchCK6Y5207Hj3DKN6_JRkwC-7ColEpnvrO1-TEhE7PTPHGuwzPpQPjaIY2AzgAHHtNsKxifXzNm34XPGpPDKkb53nF2KsOe9ERWXSg", 
+            "key": "refresh_token"
+        }, 
+        {
+            "value": "cec49328-3bfc-4c8a-9cd0-0906548b3655", 
+            "key": "consentId"
+        },
+        {
+            "value": "https://localhost:8080",
+            "key": "redirectUri"
+        },
+        {
+            "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHAiOiJkZW1vLWFwcC02MDI5ZTIxNS04YmUyLTQ1YjEtODMxNS1jYzE3YWQzZDE2YTkiLCJvcmciOiI2MDI5ZTIxNS04YmUyLTQ1YjEtODMxNS1jYzE3YWQzZDE2YTkuZXhhbXBsZS5vcmciLCJpc3MiOiJodHRwczovL2FwaS5zYW5kYm94Lm5hdHdlc3QuY29tIiwidG9rZW5fdHlwZSI6IkFDQ0VTU19UT0tFTiIsImV4dGVybmFsX2NsaWVudF9pZCI6Im81Mmp2cXNzM2VEeENlaEEzM1dPUTB6WVhyS2hFQWJTQVN5SHV2bjhoaFk9IiwiY2xpZW50X2lkIjoiNTRjZTU4Y2UtY2ZhZC00YjkzLWI5NGUtYWMyZTM1Zjk0YmFmIiwibWF4X2FnZSI6ODY0MDAsImF1ZCI6IjU0Y2U1OGNlLWNmYWQtNGI5My1iOTRlLWFjMmUzNWY5NGJhZiIsInNjb3BlIjoib3BlbmlkIGFjY291bnRzIiwiZXhwIjoxNzE0NjQ4MDcyLCJpYXQiOjE3MTQ2NDc0NzIsImp0aSI6IjYyODFhMDQxLWU5MTQtNDAyMi04Yzc2LTY0MWU5ZmJkNmI2NyIsInRlbmFudCI6Ik5hdFdlc3QifQ.U2wYDnqJ8cObpRoRI_f5yalKdN6p3sestQ69-lGSWZ_m6WjizFjotEsQbzKKDrjihW1luPIuTNQnzcqqYRkwG__D1yufc3V4R5bLtzOJHlpcvxd0A8RSI6VzPGAip25eMJ5pVjCAvVmXB6SxByMK98Obr7Q4NDe-EGBkfsDcFC1jxMXB6SxByMK98Obr7Q4NDe-EGBkfsDcFC1jxMMpLSw6md57YQ2ygCXH5CA1aBL0luXtSTp5IOWFjU7sXlYuAb6ef8opIG5KNaI8GHa521VbC7LC7gk0C8Lu3rVTZtRuudaNKFRf7x5wljYegzLXvdQV3G7j93uvqfoxkeIAiGAcVmTFbJC7LC7gk0C8Lu3rVTZtRuudaNKFRf7x5wljYBMChJmbntk40pkcWpO32D2366Dgg", 
+            "key": "access_token_1"
+        }, 
+        {
+            "value": "https://ob.sandbox.rbs.co.uk", 
+            "key": "tokenDomain"
+        }, 
+        {
+            "value": "248ecd33-90a7-4f30-80d4-5f7870430d1e.example.org", 
+            "key": "domainName"
+        }, 
+        {
+            "value": "https://ob.sandbox.rbs.co.uk", 
+            "key": "apiUrlPrefix"
+        }, 
+        {
+            "value": "kIz0qbMejTd0kBiq0pfdkOyG54lMtp0b8tGTcAWJORM=", 
+            "key": "clientId"
+        }, 
+        {
+            "value": "Sq4Mkj2TRusvb_zfQzUjYumLlXOOQojLcsNaH49cEg4=", 
+            "key": "clientSecret"
+        }, 
+        {
+            "value": "https://248ecd33-90a7-4f30-80d4-5f7870430d1e.example.org/redirect", 
+            "key": "redirectUrl"
+        }, 
+        {
+            "value": "0015800000jfwB4AAI", 
+            "key": "financialId"
+        }, 
+        {
+            "value": "123456789012@248ecd33-90a7-4f30-80d4-5f7870430d1e.example.org", 
+            "key": "psuUsername"
+        }, 
+        {
+            "value": "secret", 
+            "key": "psuPassword"
+        }, 
+        {
+            "value": "50000012345601", 
+            "key": "psuDebtorAccountIdentification"
+        }, 
+        {
+            "value": "UK.OBIE.SortCodeAccountNumber", 
+            "key": "psuDebtorAccountScheme"
+        }, 
+        {
+            "value": "GBP", 
+            "key": "psuDebtorAccountCurrency"
+        }, 
+        {
+            "value": "Sydney Beard", 
+            "key": "psuDebtorAccountName"
+        }, 
+        {
+            "value": "Personal", 
+            "key": "psuDebtorAccountType"
+        }
+    ], 
+    "name": "Getting started - CMA9 Accounts 3.1.10 - RBS - demo-app-248ecd33-90a7-4f30-80d4-5f7870430d1e", 
+    "_postman_exported_at": "now"
+}
