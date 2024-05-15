@@ -2,94 +2,86 @@ const express = require("express");
 const { KEYUTIL, KJUR } = require("jsrsasign");
 const uuid = require("uuid");
 const fs = require("fs");
+const bodyParser = require("body-parser");
 const https = require("https");
 const axios = require("axios");
 const envData = JSON.parse(fs.readFileSync("HSBC_Env.json"));
 const ClientId = envData.bank_sandbox_ob_clientId;
 const Kid = envData.bank_sandbox_ob_kid;
-var aud = envData.bank_sandbox_ob_token_endpoint;
-var sPKCS8PEM = envData.bank_sandbox_ob_PKCS8PEM;
-var scope = envData.bank_sandbox_ob_scope;
+const sPKCS8PEM = envData.bank_sandbox_ob_PKCS8PEM;
+const scope = envData.bank_sandbox_ob_scope;
+var clientAssertion = "";
 const app = express();
-const readline = require('readline');
-var token="";
-var clientAssertion="";
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-var prvKey = KEYUTIL.getKey(sPKCS8PEM);
 const port = 4000;
-var consentIdd='';
-const uuidd=uuid.v4();
-var loginurl='';
+let accessTokenForCall = "";
+const uuidd = uuid.v4();
 const publicKey = fs.readFileSync("pubkeyQseal.pem");
 const privateKey = fs.readFileSync("private.key");
 const certificate = fs.readFileSync("Transport.crt");
+var prvKey = KEYUTIL.getKey(sPKCS8PEM);
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 //1
-function GetClientCredentialsToken(callback) {
-    const joseHeader = {
-      alg: "PS256",
-      kid: Kid,
-    };
-  
-    const payload = {
-      iss: ClientId,
-      aud: "https://secure.sandbox.ob.hsbcnet.com/ce/obie/open-banking/v1.1/oauth2/token",
-      sub: ClientId,
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    };
-    clientAssertion = KJUR.jws.JWS.sign("PS256", joseHeader, payload, prvKey);
-    //const token = jwt.sign(jwtPayload, { key: privateKey, publicKey }, { header: jwtHeader });
-  console.log("??????????????");
-  console.log(clientAssertion);
-  console.log("*********88")
-    const clientCredentials = new URLSearchParams({
-      grant_type: "client_credentials",
-      scope: scope,
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      client_assertion: clientAssertion,
+async function GetClientCredentialsToken(callback) {
+  const joseHeader = {
+    alg: "PS256",
+    kid: Kid,
+  };
+
+  const payload = {
+    iss: ClientId,
+    aud: "https://secure.sandbox.ob.hsbcnet.com/ce/obie/open-banking/v1.1/oauth2/token",
+    sub: ClientId,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  };
+  clientAssertion = KJUR.jws.JWS.sign("PS256", joseHeader, payload, prvKey);
+  console.log("%%%%%", clientAssertion, "%%%%%");
+
+  const clientCredentials = new URLSearchParams({
+    grant_type: "client_credentials",
+    scope: scope,
+    client_assertion_type:
+      "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    client_assertion: clientAssertion,
+  });
+
+  const options = {
+    hostname: "secure.sandbox.ob.hsbc.co.uk",
+    port: 443,
+    path: "/obie/open-banking/v1.1/oauth2/token",
+    method: "POST",
+    key: privateKey,
+    cert: certificate,
+    headers: {
+      "x-fapi-financial-id": uuidd,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    followRedirect: false,
+  };
+
+  const reqHttps = https.request(options, (resq) => {
+    let responseData = "";
+
+    resq.on("data", (chunk) => {
+      responseData += chunk;
     });
-  
-    const options = {
-      hostname: "secure.sandbox.ob.hsbc.co.uk",
-      port: 443,
-      path: "/obie/open-banking/v1.1/oauth2/token",
-      method: "POST",
-      key: privateKey,
-      cert: certificate,
-      headers: {
-        "x-fapi-financial-id": uuid.v4(),
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      followRedirect: false,
-    };
-  
-    const reqHttps = https.request(options, (resq) => {
-      let responseData = "";
-  
-      resq.on("data", (chunk) => {
-        responseData += chunk;
-      });
-  
-      resq.on("end", () => {
-        const responseJson = JSON.parse(responseData);
-        accessToken = responseJson.access_token;
-        console.log("accesstoken",accessToken);
-        callback();
-      });
+
+    resq.on("end", () => {
+      const responseJson = JSON.parse(responseData);
+      callback(responseJson); // Call the callback function with the response
     });
-  
-    reqHttps.on("error", (e) => {
-      console.error(e);
-    });
-  
-    reqHttps.write(clientCredentials.toString());
-    reqHttps.end();
-  }
-  //2
-  // Function to generate consent
-  function CreateAccountAccessConsent(callback) {
+  });
+
+  reqHttps.on("error", (e) => {
+    console.error(e);
+  });
+
+  reqHttps.write(clientCredentials.toString());
+  reqHttps.end();
+}
+//2
+async function CreateAccountAccessConsent(accessToken) {
+  return new Promise((resolve, reject) => {
     const bodyData = {
       Data: {
         Permissions: [
@@ -119,9 +111,9 @@ function GetClientCredentialsToken(callback) {
       },
       Risk: {},
     };
-  
+
     const requestBody = JSON.stringify(bodyData);
-  
+
     const options = {
       hostname: "secure.sandbox.ob.hsbc.co.uk",
       port: 443,
@@ -136,57 +128,54 @@ function GetClientCredentialsToken(callback) {
         Accept: "application/json",
       },
     };
-  
+
     const reqHttps = https.request(options, (resq) => {
       let responseData = "";
-  
+
       resq.on("data", (chunk) => {
         responseData += chunk;
       });
-  
+
       resq.on("end", () => {
         const r = JSON.parse(responseData);
-        consentIdd = r.Data.ConsentId.toString();
-        console.log(consentIdd);
-        callback();
+        const consentIdd = r.Data.ConsentId.toString();
+        resolve(consentIdd); // Resolve the promise with consentIdd
       });
     });
-  
+
     reqHttps.on("error", (e) => {
-      console.error(e);
+      reject(e); // Reject the promise if there's an error
     });
-  
+
     reqHttps.write(requestBody);
     reqHttps.end();
-  }
-
+  });
+}
 //3
-  // Function to generate consent authorization
-  function InitiateConsentAuthorisation(res) {
+// Function to generate consent authorization
+async function InitiateConsentAuthorisation(consent) {
+  return new Promise((resolve, reject) => {
     const joseHeader = {
       alg: "PS256",
       kid: Kid,
     };
-  
+
     const payload = {
       claims: {
         userinfo: {
           openbanking_intent_id: {
-            value: consentIdd,
+            value: consent,
             essential: true,
           },
         },
         id_token: {
           openbanking_intent_id: {
-            value: consentIdd,
+            value: consent,
             essential: true,
           },
           acr: {
             essential: false,
-            values: [
-              "urn:openbanking:psd2:sca",
-              "urn:openbanking:psd2:ca",
-            ],
+            values: ["urn:openbanking:psd2:sca", "urn:openbanking:psd2:ca"],
           },
         },
       },
@@ -200,13 +189,13 @@ function GetClientCredentialsToken(callback) {
       nonce: "dummy-nonce",
       scope: "openid accounts",
     };
-  
-   // const jwtToken = jwt.sign(jwtPayload, { key: privateKey, publicKey }, { header: jwtHeader });
+
+    // const jwtToken = jwt.sign(jwtPayload, { key: privateKey, publicKey }, { header: jwtHeader });
     var requestJwt = KJUR.jws.JWS.sign("PS256", joseHeader, payload, prvKey);
     // Encode the JWT token for safe inclusion in the URL
     // const encodedJwtToken = encodeURIComponent(jwtToken);
     // console.log(encodedJwtToken);
-  
+
     const params = new URLSearchParams({
       response_type: "code id_token",
       client_id: ClientId,
@@ -216,7 +205,7 @@ function GetClientCredentialsToken(callback) {
       redirect_uri: "https://sg-dummy-acc-uk-03.com/callback",
       request: requestJwt,
     });
-  
+
     const optionsAuth = {
       hostname: "sandbox.ob.hsbc.co.uk",
       port: 443,
@@ -228,11 +217,11 @@ function GetClientCredentialsToken(callback) {
         "cache-control": "no-cache",
       },
     };
-  
+
     // Make the HTTPS request
     const reqHttps = https.request(optionsAuth, (resq) => {
       let responseData = "";
-  
+
       // Collect response data
       resq.on("data", (chunk) => {
         responseData += chunk;
@@ -240,131 +229,189 @@ function GetClientCredentialsToken(callback) {
       console.log("Status:", resq.statusCode);
       console.log("Headers", resq.headers);
       console.log("Location", resq.headers.location);
-      loginurl=resq.headers.location;
+      loginurl = resq.headers.location;
       // Log the complete response data
       resq.on("end", () => {
-        console.log("Response:", loginurl);
-        res.json({ loginurl }); // Send the response data back to the client
+        resolve(loginurl);
       });
     });
-  
+
     // Handle errors in the HTTPS request
     reqHttps.on("error", (e) => {
       console.error(e);
       res.status(500).json({ error: e.message }); // Send an error response back to the client
     });
-  
+
     // End the request
     reqHttps.end();
-  }
-  function consentToken() {
-    rl.question('Please enter the URL: ', (url) => {
-        if (url) {
-            const start = url.indexOf('code=') + 5;
-            const end = url.indexOf('&scope');
-            token = url.substring(start, end);
-            console.log("**********************************")
-            console.log("Token:", token);
-            rl.close();
-        } else {
-            console.log("URL is empty. Please provide a valid URL.");
-            rl.close();
-        }
-    });
-}
-//4
-function GetAccessToken(callback){
-    console.log("############")
-    console.log(clientAssertion);
-    const bodyData = {
-        grant_type:"authorization_code",
-        code:token,
-        client_assertion_type:"urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-        client_assertion:clientAssertion,
-        redirect_uri:"https://sg-dummy-acc-uk-03.com/callback"
-      };
-    
-      const requestBody = JSON.stringify(bodyData);
-    
-      const options = {
-        hostname: "secure.sandbox.ob.hsbc.co.uk",
-        port: 443,
-        path: "https://secure.sandbox.ob.hsbc.co.uk/obie/open-banking/v1.1/oauth2/token",
-        method: "POST",
-        key: privateKey,
-        cert: certificate,
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        
-        },
-      };
-    
-      const reqHttps = https.request(options, (resq) => {
-        let responseData = "";
-    
-        resq.on("data", (chunk) => {
-          responseData += chunk;
-        });
-    
-        resq.on("end", () => {
-          const r = JSON.parse(responseData);
-          console.log(r);
-          callback();
-        });
-      });
-    
-      reqHttps.on("error", (e) => {
-        console.error(e);
-      });
-    
-      reqHttps.write(requestBody);
-      reqHttps.end(); 
-}
-
-
-  app.get("/r1", (req, res) => {
-    GetClientCredentialsToken(() => {
-        CreateAccountAccessConsent(() => {
-            InitiateConsentAuthorisation(res);
-        });
-    });
-    consentToken(() => {
-        res.status(200).json({ message: "Consent token fetched successfully." });
-    });
-
-
-  
-
-});
-app.get("/r2", (req, res) => {
-    GetAccessToken(() => {
-        res.status(200).json({ message: "Consent token fetched succesffully." });
-    });
-});
-
-
-
-//   app.get("/r1", (req, res) => {
-//     generateToken(() => {
-//         res.status(200).json({ message: "Access token generated successfully." });
-//     });
-    
-//   });
-//   app.get("/r2", (req, res) => {
-//     generateConsent(() => {
-//         res.status(200).json({ message: "Consent generated succesffully." });
-//     });
-    
-//   });
-//   app.get("/r3", (req, res) => {
-//     consentAuthorization(() => {
-//         res.status(200).json({ message: "r3 generated succesffully." });
-//     });
-    
-//   });
-  
-  app.use(express.static("public"));
-  
-  app.listen(port, () => {
-    console.log(`Server is listening on port ${port}`);
   });
+}
+
+function consentToken(url) {
+  if (url) {
+    const start = url.indexOf("code=") + 5;
+    const end = url.indexOf("&scope");
+    if (start !== -1 && end !== -1) {
+      const token = url.substring(start, end);
+      console.log("Token:", token);
+      return token;
+    } else {
+      console.log("Invalid URL format. Could not extract token.");
+      return null; // Return null if token extraction fails
+    }
+  } else {
+    console.log("URL is empty. Please provide a valid URL.");
+    return null; // Return null if URL is empty
+  }
+}
+
+//4
+async function GetAccessToken(authToken) {
+  return new Promise((resolve, reject) => {
+    const codee = authToken;
+    const clientAssertionn = clientAssertion;
+
+    // Constructing request body with variables
+    const requestBody = `grant_type=authorization_code&code=${codee}&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=${clientAssertionn}&redirect_uri=https%3A%2F%2Fsg-dummy-acc-uk-03.com%2Fcallback`;
+
+    // Request options
+    const options = {
+      hostname: "secure.sandbox.ob.hsbc.co.uk",
+      port: 443,
+      path: "/obie/open-banking/v1.1/oauth2/token",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "cache-control": "no-cache",
+      },
+      key: fs.readFileSync("private.key"),
+      cert: fs.readFileSync("transport.crt"),
+    };
+
+    // Send the request
+    const req = https.request(options, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      res.on("end", () => {
+        console.log("Response Status:", res.statusCode);
+        console.log("Response Body:", data);
+        //accessTokenForCall=data.access_token;
+        //callback(data);
+        resolve(data);
+      });
+    });
+
+    req.on("error", (error) => {
+      console.error("Request Error:", error);
+    });
+
+    req.write(requestBody);
+    req.end();
+  });
+}
+
+//5
+async function GetAccounts(accessTokenForCalll) {
+  return new Promise((resolve, reject) => {
+    console.log("*******");
+    console.log(accessTokenForCalll);
+    const options = {
+      hostname: "secure.sandbox.ob.hsbc.co.uk",
+      port: 443,
+      path: "/obie/open-banking/v3.1/aisp/accounts",
+      method: "GET",
+      key: privateKey,
+      cert: certificate,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessTokenForCalll}`,
+        "x-fapi-financial-id": uuidd,
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      res.on("end", () => {
+        console.log("Response Status:", res.statusCode);
+        console.log("Response Body:", data);
+        resolve(data); // Resolve the promise with the response data
+      });
+    });
+
+    req.on("error", (error) => {
+      console.error("Request Error:", error);
+      reject(error); // Reject the promise if there's an error
+    });
+
+    req.end(); // End the request
+  });
+}
+
+app.post("/r1", async (req, res) => {
+  try {
+    await GetClientCredentialsToken(async (response) => {
+      const accessToken = response.access_token;
+      const consentId = await CreateAccountAccessConsent(accessToken);
+      const loginurl = await InitiateConsentAuthorisation(consentId);
+      res.status(200).json({
+        accessToken: accessToken,
+        consentId: consentId,
+        login: loginurl,
+      }); // Send consentId in response
+    });
+  } catch (error) {
+    console.error("Error in /r1 route:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.post("/r2", async (req, res) => {
+  try {
+    const url = req.body.url;
+    if (!url) {
+      return res.status(400).json({ error: "URL is missing" });
+    }
+    const authToken = consentToken(url); // Call the function to extract the auth token from the URL
+    if (!authToken) {
+      return res.status(400).json({ error: "Invalid URL or auth token" });
+    }
+    console.log("Auth token:", authToken);
+    // Call the function to get the access token passing the authToken
+    const access = await GetAccessToken(authToken); // Await for the access token
+    accessTokenForCall = access;
+    // Send the access token back to the client
+    res.status(200).json({
+      message: "Access token received successfully",
+      access: access, // Sending the access token in the response
+    });
+  } catch (error) {
+    console.error("Error in /r2 route:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.post("/r3", async (req, res) => {
+  console.log("i am in r3");
+  const responseObject = JSON.parse(accessTokenForCall);
+  const accessToken = responseObject.access_token;
+  console.log(accessToken);
+  const accRes = await GetAccounts(accessToken);
+  res.status(200).json({
+    message: "accounts",
+    accounts: accRes,
+  });
+});
+app.use(express.static("public"));
+
+app.listen(port, () => {
+  console.log(`Server is listening on port ${port}`);
+});
