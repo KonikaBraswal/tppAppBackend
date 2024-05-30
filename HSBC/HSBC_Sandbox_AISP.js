@@ -356,7 +356,88 @@ async function GetAccounts(accessTokenForCalll) {
   });
 }
 
-app.post("/r1", async (req, res) => {
+//6
+async function GetBalance(accessTokenForCalll, accountID) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: "secure.sandbox.ob.hsbc.co.uk",
+      port: 443,
+      path: `/obie/open-banking/v3.1/aisp/accounts/${accountID}/balances`,
+      method: "GET",
+      key: privateKey,
+      cert: certificate,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessTokenForCalll}`,
+        "x-fapi-financial-id": uuidd,
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+      res.on("end", () => {
+        console.log("Response Status:", res.statusCode);
+        console.log("Response Body:", data);
+        resolve(data); // Resolve the promise with the response data
+      });
+    });
+
+    req.on("error", (error) => {
+      console.error("Request Error:", error);
+      reject(error); // Reject the promise if there's an error
+    });
+
+    req.end();
+  });
+}
+
+
+//7 
+
+async function GetTransactions(accessToken, accountId) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: "secure.sandbox.ob.hsbc.co.uk",
+      port: 443,
+      path: `/obie/open-banking/v3.1/aisp/accounts/${accountId}/transactions`,
+      method: "GET",
+      key: privateKey,
+      cert: certificate,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "x-fapi-financial-id": uuidd,
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      res.on("end", () => {
+        if (res.statusCode === 200) {
+          resolve(JSON.parse(data)); // Resolve the promise with the parsed JSON data
+        } else {
+          reject(new Error(`Failed to fetch transactions: ${res.statusCode}`));
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      reject(error); // Reject the promise if there's an error
+    });
+
+    req.end();
+  });
+}
+app.post("/TokenConsentLogin_Sandbox_HSBC", async (req, res) => {
   try {
     await GetClientCredentialsToken(async (response) => {
       const accessToken = response.access_token;
@@ -374,7 +455,7 @@ app.post("/r1", async (req, res) => {
   }
 });
 
-app.post("/r2", async (req, res) => {
+app.post("/AccessToken_HSBC_Sandbox", async (req, res) => {
   try {
     const url = req.body.url;
     if (!url) {
@@ -399,8 +480,8 @@ app.post("/r2", async (req, res) => {
   }
 });
 
-app.post("/r3", async (req, res) => {
-  console.log("i am in r3");
+app.post("/FetchAccounts_HSBC_Sandbox", async (req, res) => {
+  
   const responseObject = JSON.parse(accessTokenForCall);
   const accessToken = responseObject.access_token;
   console.log(accessToken);
@@ -410,6 +491,46 @@ app.post("/r3", async (req, res) => {
     accounts: accRes,
   });
 });
+
+app.post("/FetchAccounts_HSBC_Sandbox/:accountId/balances", async (req, res) => {
+  try {
+    const responseObject = JSON.parse(accessTokenForCall);
+    const accessToken = responseObject.access_token;
+    console.log(accessToken);
+    const { accountId } = req.params;
+    const accRes = await GetBalance(accessToken, accountId);
+    res.status(200).json({
+      message: "account balances",
+      balances: accRes,
+    });
+  } catch (error) {
+    console.error("Error in /FetchAccounts_HSBC_Sandbox/:accountId/balances route:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.post("/FetchAccounts_HSBC_Sandbox/:accountId/transactions", async (req, res) => {
+  try {
+    const responseObject = JSON.parse(accessTokenForCall);
+    const accessToken = responseObject.access_token;
+    const { accountId } = req.params;
+
+    if (!accessToken) {
+      return res.status(400).json({ error: "Access token is missing" });
+    }
+
+    const transactions = await GetTransactions(accessToken, accountId);
+
+    res.status(200).json({
+      message: "Account transactions fetched successfully",
+      transactions: transactions,
+    });
+  } catch (error) {
+    console.error("Error in /FetchAccounts_HSBC_Sandbox/:accountId/transactions route:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 app.use(express.static("public"));
 
 app.listen(port, () => {
