@@ -314,6 +314,68 @@ async function GetAccessToken(authToken) {
   });
 }
 
+
+//4.1
+
+async function RefreshAccessToken(refreshToken) {
+  return new Promise((resolve, reject) => {
+    const codee = refreshToken;
+    const joseHeader = {
+      alg: "PS256",
+      kid: Kid,
+    };
+  
+    const payload = {
+      iss: ClientId,
+      aud: "https://secure.sandbox.ob.hsbcnet.com/ce/obie/open-banking/v1.1/oauth2/token",
+      sub: ClientId,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    };
+    const clientAssertionRefreshToken = KJUR.jws.JWS.sign("PS256", joseHeader, payload, prvKey);
+    const clientAssertionn = clientAssertionRefreshToken;
+    console.log("*****************************",codee)
+    // Constructing request body with variables
+    const requestBody = `grant_type=refresh_token&refresh_token=${codee}&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=${clientAssertionn}&redirect_uri=https%3A%2F%2Fsg-dummy-acc-uk-03.com%2Fcallback`;
+
+    // Request options
+    const options = {
+      hostname: "secure.sandbox.ob.hsbc.co.uk",
+      port: 443,
+      path: "/obie/open-banking/v1.1/oauth2/token",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "cache-control": "no-cache",
+      },
+      key: fs.readFileSync("private.key"),
+      cert: fs.readFileSync("transport.crt"),
+    };
+
+    // Send the request
+    const req = https.request(options, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      res.on("end", () => {
+        console.log("Response Status:", res.statusCode);
+        console.log("Response Body:", data);
+        //accessTokenForCall=data.access_token;
+        //callback(data);
+        resolve(data);
+      });
+    });
+
+    req.on("error", (error) => {
+      console.error("Request Error:", error);
+    });
+
+    req.write(requestBody);
+    req.end();
+  });
+}
 //5
 async function GetAccounts(accessTokenForCalll) {
   return new Promise((resolve, reject) => {
@@ -395,7 +457,6 @@ async function GetBalance(accessTokenForCalll, accountID) {
   });
 }
 
-
 //7 
 
 async function GetTransactions(accessToken, accountId) {
@@ -438,6 +499,7 @@ async function GetTransactions(accessToken, accountId) {
   });
 }
 app.post("/TokenConsentLogin_Sandbox_HSBC", async (req, res) => {
+  console.log("Here")
   try {
     await GetClientCredentialsToken(async (response) => {
       const accessToken = response.access_token;
@@ -527,6 +589,24 @@ app.post("/FetchAccounts_HSBC_Sandbox/:accountId/transactions", async (req, res)
     });
   } catch (error) {
     console.error("Error in /FetchAccounts_HSBC_Sandbox/:accountId/transactions route:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.post("/RefreshAccessToken_HSBC_Sandbox", async (req, res) => {
+  try {
+    const refreshtoken = req.body.refresh_token;
+    console.log("refreshtoken token:", refreshtoken);
+    // Call the function to get the access token passing the authToken
+    const access = await RefreshAccessToken(refreshtoken); // Await for the access token
+    accessTokenForCall = access;
+    // Send the access token back to the client
+    res.status(200).json({
+      message: "Access token received successfully",
+      access: access, // Sending the access token in the response
+    });
+  } catch (error) {
+    console.error("Error in /r2 route:", error);
     res.status(500).send("Internal Server Error");
   }
 });
