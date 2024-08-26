@@ -6,8 +6,8 @@ const CryptoJS = require('crypto-js');
 const tunnel = require('tunnel');
 const fs = require('fs');
 
-const cert = fs.readFileSync('.\\cert.pem');
-const key = fs.readFileSync('.\\key.key');
+// const cert = fs.readFileSync('.\\cert.pem');
+// const key = fs.readFileSync('.\\key.key');
 
 const { v4: uuidv4} = require('uuid');
 
