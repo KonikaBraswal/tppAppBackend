@@ -16,7 +16,7 @@ const generateGuid = () => {
 };
 
 var uuid =require('uuid');
-const jwtFile = fs.readFileSync('.\\jwt.js');
+const jwtFile = fs.readFileSync('jwt.js');
 var nonce = uuid.v4();
 const KJUR = require('jsrsasign');
 
