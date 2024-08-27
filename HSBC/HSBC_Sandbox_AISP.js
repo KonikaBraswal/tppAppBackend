@@ -285,7 +285,7 @@ async function GetAccessToken(authToken) {
         "cache-control": "no-cache",
       },
       key: fs.readFileSync("private.key"),
-      cert: fs.readFileSync("transport.crt"),
+      cert: fs.readFileSync("Transport.crt"),
     };
 
     // Send the request
@@ -348,7 +348,7 @@ async function RefreshAccessToken(refreshToken) {
         "cache-control": "no-cache",
       },
       key: fs.readFileSync("private.key"),
-      cert: fs.readFileSync("transport.crt"),
+      cert: fs.readFileSync("Transport.crt"),
     };
 
     // Send the request
